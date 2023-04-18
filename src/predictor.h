@@ -2,11 +2,13 @@
 #define RIME_PREDICTOR_H_
 
 #include <rime/processor.h>
+#include <rime/translator.h>
 
 namespace rime {
 
 class Context;
 class PredictDb;
+class Translator;
 
 class Predictor : public Processor {
  public:
@@ -23,10 +25,12 @@ class Predictor : public Processor {
  private:
   enum Action { kUnspecified, kSelect, kDelete };
   Action last_action_ = kUnspecified;
-
+  string alphabel_;
+  int history_lenght_;
   PredictDb* db_;
   connection select_connection_;
   connection context_update_connection_;
+  an<Translator> translator_;
 };
 
 class PredictorComponent : public Predictor::Component {
