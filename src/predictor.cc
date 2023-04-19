@@ -22,11 +22,12 @@ namespace rime {
 inline size_t utf8_lenght(const string& str){
   return  utf8::unchecked::distance(str.c_str(), str.c_str() + str.length());
 }
-string utf8_substr_(const std::string& str, unsigned int start, unsigned int leng)
+string utf8_substr_(const std::string& str, int32_t start, int32_t leng)
 {
     if (leng==0) { return ""; }
-    unsigned int32 c, i, ix, q;
-    unsigned int32 min=std::string::npos, max=std::string::npos;
+    int32_t c, i, ix, q;
+    auto min = std::string::npos;
+    auto max = std::string::npos;
     for (q=0, i=0, ix=str.length(); i < ix; i++, q++)
     {
         if (q==start){ min=i; }
