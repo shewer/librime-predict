@@ -100,7 +100,6 @@ Predictor::Predictor(const Ticket& ticket, PredictDb* db)
 
   }
   if (auto c = Translator::Require("table_translator")){
-    LOG(INFO) << "-------------------->create table_translator " << name_space_ ;
     translator_.reset( c->Create(Ticket(engine_,name_space_, "table_translator")));
   }
 
@@ -139,7 +138,7 @@ ProcessResult Predictor::ProcessKeyEvent(const KeyEvent& key_event) {
     if (!ctx->composition().empty() &&
         ctx->composition().back().HasTag("prediction")) {
       LOG(INFO) <<" keyevent ascii code and belone to";
-      ctx->Clear();
+      ctx->PopInput(ctx->composition().back().length);
       ctx->RefreshNonConfirmedComposition();
     }
   } else {
@@ -149,7 +148,8 @@ ProcessResult Predictor::ProcessKeyEvent(const KeyEvent& key_event) {
 }
 
 void Predictor::OnSelect(Context* ctx) {
-  last_action_ = kSelect;
+  if (ctx->get_option('predict'))
+    last_action_ = kSelect;
 }
 
 void Predictor::OnContextUpdate(Context* ctx) {
