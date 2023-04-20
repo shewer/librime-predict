@@ -148,7 +148,7 @@ ProcessResult Predictor::ProcessKeyEvent(const KeyEvent& key_event) {
 }
 
 void Predictor::OnSelect(Context* ctx) {
-  if (ctx->get_option('predict'))
+  if (ctx->get_option("predict"))
     last_action_ = kSelect;
 }
 
