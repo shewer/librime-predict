@@ -172,7 +172,7 @@ class PredictTranslation : public FifoTranslation {
           auto cand = New<SimpleCandidate>(
               "prediction", segment.start, segment.end, db->GetEntryText(*it) );
 
-          cand->set_comment("--" + std::to_string(cand->quality() ) );
+          //cand->set_comment("--" + std::to_string(cand->quality() ) );
           Append(cand);
         }
       }
@@ -201,8 +201,8 @@ an<Candidate> predict_shadow(an<Candidate> cand, const string& prefix) {
   if (f_idx == 0 && cand->text().length() > prefix.length() ){
     auto text = cand->text().substr(prefix.length());
     cand->set_quality( 1.0 + cand->quality());
-    return New<ShadowCandidate>(cand,cand->type(), text,
-        cand->comment()+" essay " + std::to_string(cand->quality()));
+    return New<ShadowCandidate>(cand,cand->type(), text,"");
+      //cand->comment()+" essay " + std::to_string(cand->quality()));
   }
   return {};
 }
