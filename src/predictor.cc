@@ -158,8 +158,10 @@ void Predictor::OnContextUpdate(Context* ctx) {
   if (last_action_ == kDelete) {
     return;
   }
-  string t = get_history_text(ctx, history_lenght_);
-  Predict(ctx, t);
+  if (last_action == kSelect) {
+    string t = get_history_text(ctx, history_lenght_);
+    Predict(ctx, t);
+  }
 }
 
 class PredictTranslation : public FifoTranslation {
