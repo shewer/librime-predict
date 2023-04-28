@@ -50,18 +50,17 @@ string utf8_substr_(const std::string& str, int32_t start, int32_t leng)
 }
 
 string utf8_substr(const string& str,int start, int len=-1){
-
   if (len == 0) {
     return "";
   }
-  size_t u8len= utf8_lenght(str);
-  if (start <0){
-    start += u8len;
-    if (start <0)
-      start = 0;
+  size_t ustr_len= utf8_lenght(str);
+  if (start >= ustr_len) {
+    return "";
   }
-  if (len<0)
-    len = u8len -start;
+
+  start = (start >=0) ? start :
+    ((start+ ustr_len)<0) ? 0: start + ustr_len;
+
   return utf8_substr_(str, start, len);
 }
 
@@ -161,10 +160,8 @@ void Predictor::OnContextUpdate(Context* ctx) {
   if (last_action_ == kDelete) {
     return;
   }
-  if (last_action_ == kSelect) {
-    string t = get_history_text(ctx, history_lenght_);
-    Predict(ctx, t);
-  }
+  string t = get_history_text(ctx, history_lenght_);
+  Predict(ctx, t);
 }
 
 class PredictTranslation : public FifoTranslation {
