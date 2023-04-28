@@ -153,7 +153,7 @@ void Predictor::OnSelect(Context* ctx) {
 }
 
 void Predictor::OnContextUpdate(Context* ctx) {
-  if (ctx:get_option('predict')) {
+  if (! ctx->get_option("predict")) {
     return;
   }
   if (!db_ || !ctx || !ctx->composition().empty())
