@@ -61,6 +61,10 @@ string utf8_substr(const string& str,int start, int len=-1){
   start = (start >=0) ? start :
     ((start+ ustr_len)<0) ? 0: start + ustr_len;
 
+  if (len <0) {
+    len =  ustr_len - start;
+  };
+
   return utf8_substr_(str, start, len);
 }
 
@@ -87,7 +91,7 @@ static inline bool belongs_to(char ch, const string& charset) {
 }
 
 Predictor::Predictor(const Ticket& ticket, PredictDb* db)
-    : Processor(ticket), db_(db), alphabel_(kRimeAlphabel),history_lenght_(3) {
+    : Processor(ticket), db_(db), alphabel_(kRimeAlphabel),history_length_(3) {
   if (name_space_ == "processor"){
     name_space_="predictor";
   }
@@ -95,7 +99,7 @@ Predictor::Predictor(const Ticket& ticket, PredictDb* db)
     config->GetString("speller/alphabel", &alphabel_);
     config->SetBool(name_space_ + "/enable_completion", true);
     config->SetString(name_space_ + "/tag" , "prediction");
-    config->GetInt(name_space_ + "/history_lenght", &history_lenght_);
+    config->GetInt(name_space_ + "/history_length", &history_length_);
 
   }
   if (auto c = Translator::Require("table_translator")){
@@ -160,7 +164,7 @@ void Predictor::OnContextUpdate(Context* ctx) {
   if (last_action_ == kDelete) {
     return;
   }
-  string t = get_history_text(ctx, history_lenght_);
+  string t = get_history_text(ctx, history_length_);
   Predict(ctx, t);
 }
 

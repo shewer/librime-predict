@@ -26,7 +26,7 @@ class Predictor : public Processor {
   enum Action { kUnspecified, kSelect, kDelete };
   Action last_action_ = kUnspecified;
   string alphabel_;
-  int history_lenght_;
+  int history_length_;
   PredictDb* db_;
   connection select_connection_;
   connection context_update_connection_;
