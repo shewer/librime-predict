@@ -58,7 +58,7 @@ Predictor::~Predictor() {
 ProcessResult Predictor::ProcessKeyEvent(const KeyEvent& key_event) {
   auto ch = key_event.keycode();
   auto* ctx = engine_->context();
-  if ( ch == XK_BackSpace or ch == XK_Escape) {
+  if ( ch == XK_BackSpace || ch == XK_Escape) {
     last_action_ = kDelete;
     if (!ctx->composition().empty() &&
         ctx->composition().back().HasTag("prediction")) {
