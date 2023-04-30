@@ -9,6 +9,7 @@
 #define UTF8_UTILS_H
 
 #include <utf8.h>
+#include <string>
 
 using std::string;
 inline size_t utf8_length(const string& str){
