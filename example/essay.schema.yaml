@@ -9,6 +9,7 @@ patch:    # desable include custom.yaml
 
 schema:
   schema_id: essay
+  name: essay
 speller:
   algebra:
     #- xform/^([a-z;,]).([a-z;,])$/$1$2\?/  # 取首尾二碼爲反查三碼字
