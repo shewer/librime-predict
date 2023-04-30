@@ -1,0 +1,20 @@
+patch:
+
+  engine/processors/@after 4: predictor
+  predictor:
+    __include: essay_cn.schema:/translator # include essay table_translator
+    # overwrite as below for predictor setting.
+    enable_predictdb: true # default: true 
+    tag: prediction
+    #prefix_from: history # default:history history| property |input
+    #text_with_prefix: true # default false 
+    with_match_candidate: true
+    #history_length: 7  # default 3 
+    enable_completion: true # 
+    enable_sentence: false  #
+    initial_quality: 1.7 # predict quality 
+    #placeholder_char: " " # default " "
+  
+
+
+  
