@@ -287,7 +287,7 @@ an<Translation> PredictTranslator::Query(const string& input, const Segment& seg
   }
   *union_tran += New<PredictDbTranslation>(db_, "$", segment, initial_quality_ -0.02); 
 
-  return New<DistinctTranslation>(union_tran);
+  return union_tran;
 }
 
 
