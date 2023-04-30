@@ -1,9 +1,22 @@
 patch:
-  engine/processors/@after 1: predictor #  
+  engine/processors/@after 4: predictor #  
   predictor:
     __include: essay.schema:/translator # import dictionary
     tag: prediction  # for prediction
     history_lenght: 7 # commit_history  字串最長 7 (utf8)
     enable_completion: true # 必須enable 
     initial_quality: 1.7    # 設定 candidate 權重
+    #placeholder_char: " " # default " "
+
+  switches/+:
+    - name: predict
+      reset: 1
+      states: [关, 联]
+      
+
+
+
+#__patch:
+  #- patch/+
+    #__include: predict_plugin:/patch
 
