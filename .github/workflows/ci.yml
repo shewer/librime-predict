@@ -3,6 +3,7 @@ on: [push, pull_request]
 jobs:
   linux:
     uses: rime/librime/.github/workflows/linux-build.yml@master
+    rime_plugins: ${{ github.repository }}@${{ github.ref_name }}
 
   macos:
     uses: rime/librime/.github/workflows/macos-build.yml@master
