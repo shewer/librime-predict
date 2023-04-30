@@ -2,11 +2,6 @@
 
 #include "utf8_utils.h"
 
-
-inline size_t utf8_length(const string& str){
-  return  utf8::unchecked::distance(str.c_str(), str.c_str() + str.length());
-}
-
 inline static string utf8_substr_(const string& str, size_t start, size_t  len=std::string::npos)
 {
     auto pos= str.begin();

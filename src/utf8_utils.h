@@ -11,7 +11,7 @@
 #include <utf8.h>
 
 using std::string;
-inline size_t utf8_lenght(const string& str){
+inline size_t utf8_length(const string& str){
   return  utf8::unchecked::distance(str.c_str(), str.c_str() + str.length());
 }
 string utf8_substr(const string& str,int start, size_t len= std::string::npos);

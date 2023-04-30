@@ -238,7 +238,7 @@ static string get_history_text(Context* ctx, size_t len){
     {
       text.insert(0, rit->text);
       string res = utf8_substr( text , -(len));
-      if (utf8_lenght(res) >= len )  {
+      if (utf8_length(res) >= len )  {
         return res;
       }
     }
