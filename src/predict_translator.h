@@ -11,6 +11,9 @@
 #include <rime/gear/translator_commons.h>
 
 namespace rime {
+static const char* kPlaceholder = " ";
+static const int kHistoryLength = 3;
+
 class Context;
 class PredictDb;
 class Translation;

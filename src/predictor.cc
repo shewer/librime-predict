@@ -13,7 +13,7 @@
 #include <rime/translation.h>
 
 
-static const char* kPlaceholder = " ";
+//static const char* kPlaceholder = " ";
 static const char kRimeAlphabel[]= "zyxwvutsrqponmlkjihgfedcba";
 
 namespace rime {
@@ -27,9 +27,12 @@ Predictor::Predictor(const Ticket& ticket)
   if (name_space_ == "processor"){
     name_space_="predictor";
   }
+
   if (Config* config = engine_->schema()->config()) {
     config->GetString("speller/alphabel", &alphabel_);
     config->GetString(name_space_ + "/placeholder_char", &placeholder_);
+    // set prediction tag for segmetor of matcher.
+    config->SetString("recognizer/patterns/prediction", "^" + placeholder_ + "$");
   }
   if (auto c = Translator::Require("predict_translator")){
     translator_.reset( c->Create( Ticket(engine_, name_space_, "predict_translator")) );
@@ -38,58 +41,42 @@ Predictor::Predictor(const Ticket& ticket)
 
   // update prediction on context change.
   auto* context = engine_->context();
-  select_connection_ =
-      context->select_notifier().connect(
-          [this](Context* ctx) {
-            OnSelect(ctx);
-          });
-  context_update_connection_ =
-      context->update_notifier().connect(
-          [this](Context* ctx) {
-            OnContextUpdate(ctx);
-          });
+  commit_connection_ = context->commit_notifier().connect(
+      [this](Context* ctx) { OnCommit(ctx); });
+  context_update_connection_ = context->update_notifier().connect(
+      [this](Context* ctx) { OnContextUpdate(ctx); });
 }
 
 Predictor::~Predictor() {
-  select_connection_.disconnect();
+  commit_connection_.disconnect();
   context_update_connection_.disconnect();
 }
 
 ProcessResult Predictor::ProcessKeyEvent(const KeyEvent& key_event) {
   auto ch = key_event.keycode();
   auto* ctx = engine_->context();
-  if ( ch == XK_BackSpace || ch == XK_Escape) {
-    last_action_ = kDelete;
-    if (!ctx->composition().empty() &&
-        ctx->composition().back().HasTag("prediction")) {
-      ctx->PopInput(ctx->composition().back().length);
-      return kAccepted;
-    }
-  } else if ( ch < 0x7f && belongs_to(ch, alphabel_) ){
-    last_action_ = kUnspecified;
-    if (!ctx->composition().empty() &&
-        ctx->composition().back().HasTag("prediction")) {
-      LOG(INFO) <<" keyevent ascii code and belone to";
-      ctx->PopInput(ctx->composition().back().length);
-      ctx->RefreshNonConfirmedComposition();
-    }
-  } else {
-    last_action_ = kUnspecified;
+  auto comp= ctx->composition();
+
+  if ( key_event.ctrl() || key_event.alt() || key_event.super() ){
+    return kNoop;
+  }
+
+  if ( active_ && ch >=0x20 && ch < 0x7f && belongs_to(ch, alphabel_) ){
+    active_ = false;
+    ctx->Clear();
   }
   return kNoop;
 }
 
-void Predictor::OnSelect(Context* ctx) {
-    last_action_ = kSelect;
+void Predictor::OnCommit(Context* ctx) {
+  active_ = ctx->get_option("predict");
 }
 
 void Predictor::OnContextUpdate(Context* ctx) {
-  if (!translator_ || !ctx || !ctx->composition().empty())
-    return;
-  if (last_action_ == kDelete) {
+  if (!translator_ || !ctx || ctx->IsComposing()) {
     return;
   }
-  if (ctx->get_option("predict")){
+  if (active_){
     Predict(ctx);
   }
 }

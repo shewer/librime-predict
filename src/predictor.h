@@ -18,16 +18,15 @@ class Predictor : public Processor {
 
  protected:
   void OnContextUpdate(Context* ctx);
-  void OnSelect(Context* ctx);
+  void OnCommit(Context* ctx);
   void Predict(Context* ctx);
 
  private:
-  enum Action { kUnspecified, kSelect, kDelete };
-  Action last_action_ = kUnspecified;
+  bool active_= false;
   string alphabel_;
   string placeholder_;
   an<Translator> translator_;
-  connection select_connection_;
+  connection commit_connection_;
   connection context_update_connection_;
 };
 

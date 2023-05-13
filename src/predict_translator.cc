@@ -13,34 +13,36 @@
 #include <rime/gear/translator_commons.h>
 //#include <rime/config.h>
 //
-//translation 
-//query 
-//  switch input from  history input property 
-//  predictdb  db active_input 
+//translation
+//query
+//  switch input from  history input property
+//  predictdb  db active_input
 //
 //
-//  
-//  switch input from  history input property 
-//  
+//
+//  switch input from  history input property
+//
 //  with_candidate (has_menu)
 //  with_match_text (cand.text == active_input)
 //  table  active_input and wrap shadow
 //
 namespace rime {
 
-static const char* kPlaceholder = " ";
-static const int kHistoryLength = 3;
 
 class PredictDbTranslation : public FifoTranslation {
   public:
-    PredictDbTranslation(PredictDb *db, const string& prefix, const Segment& segment, double quality=1.0);
+    PredictDbTranslation(PredictDb *db, const string& prefix,
+        const Segment& segment, double quality=1.0);
     ~PredictDbTranslation() {};
 };
 
-PredictDbTranslation::PredictDbTranslation(PredictDb *db, const string& prefix, const Segment& segment, double quality) {
+PredictDbTranslation::PredictDbTranslation(PredictDb *db, const string& prefix,
+    const Segment& segment, double quality) {
   if (auto cands = db->Lookup(prefix)) {
     for (auto* it=cands->begin() ; it != cands->end() ; it++){
-      auto cand =New<SimpleCandidate>("prediction", segment.start, segment.end, db->GetEntryText(*it), "pre", prefix);
+      auto cand =New<SimpleCandidate>(
+          "prediction", segment.start, segment.end, db->GetEntryText(*it), "pre", prefix);
+
       cand->set_quality(quality);
       Append(cand);
     }
@@ -131,7 +133,7 @@ class PredictTranslation1 : public UnionTranslation{
 bool PredictTranslation1::Replenish(){
   do {
     auto t = func_(prefix_); // <<---------- Bug 找不到時會異常
-      
+
     if (t && !t->exhausted()){
       *this += t;
     }
@@ -142,7 +144,7 @@ bool PredictTranslation1::Replenish(){
 }
 
 
-// ShadowTranslation 
+// ShadowTranslation
 typedef std::function<an<Candidate>(an<Candidate> cand, const string&, const string&)> shadow_func;
 class ShadowTranslation : public CacheTranslation{
   public:
@@ -186,9 +188,8 @@ an<Candidate> predict_shadow2(an<Candidate> cand, const string& last_match) {
 }
 
 ShadowTranslation::ShadowTranslation(an<Translation> translation,
-        shadow_func func, const string& prefix, const string& last_match) : 
-  CacheTranslation(translation), prefix_(prefix), last_match_(last_match), func_(func) {
-  }
+        shadow_func func, const string& prefix, const string& last_match) :
+  CacheTranslation(translation), prefix_(prefix), last_match_(last_match), func_(func) {}
 
 
 an<Candidate> ShadowTranslation::Peek(){
@@ -219,7 +220,7 @@ void PredictTranslator::set_prefix_from(const string& str){
     prefix_from_ = kProperty;
   else if (str == "input")
     prefix_from_ = kInput;
-  else 
+  else
     prefix_from_ = kHistory;
 }
 
@@ -257,7 +258,7 @@ an<Translation> PredictTranslator::Query(const string& input, const Segment& seg
   Context* ctx= engine_->context();
   if (prefix_from_== kHistory){
      from = "history";
-     LOG(INFO) << ctx->commit_history().repr();
+     DLOG(INFO) << ctx->commit_history().repr();
      active_input= get_history_text(ctx, history_length_);
   } else if (prefix_from_ == kProperty) {
     from = "property";
@@ -285,53 +286,53 @@ an<Translation> PredictTranslator::Query(const string& input, const Segment& seg
     *union_tran += merged_tran;
     active_input = utf8_substr(active_input, 1);
   }
-  *union_tran += New<PredictDbTranslation>(db_, "$", segment, initial_quality_ -0.02); 
+  *union_tran += New<PredictDbTranslation>(db_, "$", segment, initial_quality_ -0.02);
 
   return union_tran;
 }
 
 
 void PredictTranslator::load_config() {
-    if (name_space_ == "translator")
-      name_space_ = "predictor";
+  if (name_space_ == "translator")
+    name_space_ = "predictor";
 
 
-    if (auto config= engine_->schema()->config() ) {
-      config->GetInt(name_space_ + "/history_length",&history_length_);
-      if (history_length_ <= 0) {
-        history_length_= kHistoryLength ;
+  if (auto config= engine_->schema()->config() ) {
+    config->GetInt(name_space_ + "/history_length",&history_length_);
+    if (history_length_ <= 0) {
+      history_length_= kHistoryLength ;
+    }
+
+    config->GetString(name_space_ + "/placeholder_char", &placeholder_);
+
+    if ( !config->GetString(name_space_ + "/tag", &tag_)){
+      LOG(INFO) << "reset tag to config " << name_space_ + "/tag:" << tag_;
+      config->SetString(name_space_ + "/tag", tag_);
+    }
+
+    config->GetBool(name_space_ + "/enable_predictdb", &enable_predictdb_);
+
+    string prefix_from="history";
+    if (config->GetString(name_space_ + "/prefix_from", &prefix_from )){
+      set_prefix_from(prefix_from);
+    }
+    config->GetBool(name_space_ + "/text_with_prefix",&text_with_prefix_);
+    config->GetBool(name_space_ + "/with_match_candidate", &with_match_candidate_);
+
+    string dict;
+    if ( config->GetString(name_space_ + "/dictionary",&dict) && !dict.empty() ) {
+      if (config->IsNull(name_space_ + "/enable_completion")) {
+        config->SetBool(name_space_ + "/enable_completion", true);
       }
-
-      config->GetString(name_space_ + "/placeholder_char", &placeholder_);
-
-      if ( !config->GetString(name_space_ + "/tag", &tag_)){
-        LOG(INFO) << "reset tag to config " << name_space_ + "/tag:" << tag_;
-        config->SetString(name_space_ + "/tag", tag_);
+      if (config->IsNull(name_space_ + "/enable_sentence")){
+        config->SetBool(name_space_ + "/enable_sentence",false);
       }
-        
-      config->GetBool(name_space_ + "/enable_predictdb", &enable_predictdb_);
-
-      string prefix_from="history";
-      if (config->GetString(name_space_ + "/prefix_from", &prefix_from )){
-        set_prefix_from(prefix_from);
-      }
-      config->GetBool(name_space_ + "/text_with_prefix",&text_with_prefix_);
-      config->GetBool(name_space_ + "/with_match_candidate", &with_match_candidate_);
-
-      string dict;
-      if ( config->GetString(name_space_ + "/dictionary",&dict) && !dict.empty() ) {
-        if (config->IsNull(name_space_ + "/enable_completion")) {
-          config->SetBool(name_space_ + "/enable_completion", true);
-        }
-        if (config->IsNull(name_space_ + "/enable_sentence")){
-          config->SetBool(name_space_ + "/enable_sentence",false);
-        }
-        Ticket t{engine_, name_space_, "table_translator"};
-        if ( auto c = Translator::Require(t.klass)) {
-          translator_.reset(c->Create(t));
-        }
+      Ticket t{engine_, name_space_, "table_translator"};
+      if ( auto c = Translator::Require(t.klass)) {
+        translator_.reset(c->Create(t));
       }
     }
+  }
 }
 
 // PredictTranslator
