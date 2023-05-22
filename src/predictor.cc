@@ -12,101 +12,94 @@
 #include <rime/translator.h>
 #include <rime/translation.h>
 
-
-static const char* kPlaceholder = " ";
 static const char kRimeAlphabel[]= "zyxwvutsrqponmlkjihgfedcba";
+static const char kSelect_keys[] = "1234567890";
 
 namespace rime {
+
 
 static inline bool belongs_to(char ch, const string& charset) {
   return charset.find(ch) != std::string::npos;
 }
 
+void Predictor::LoadConfig() {
+  if (Config* config = engine_->schema()->config()) {
+    config->GetString("menu/alternative_select_keys", &select_keys_);
+    config->GetBool(name_space_ + "/return_key_with_clear", &return_key_with_clear_);
+    config->GetString(name_space_ + "/placeholder_char", &placeholder_);
+    config->GetString(name_space_ + "/tag", &tag_);
+
+    // set matcher patterns
+    string path = "recognizer/patterns/" + tag_;
+    if (config->IsNull(path)){
+      config->SetString(path ,"^" + placeholder_ + "$");
+    }
+    // add predict_translator
+    auto conf_list = config->GetList("engine/translators");
+    bool find_tran = false;
+    for ( size_t i=0; i < conf_list->size() ; i++){
+      auto value=conf_list->GetValueAt(i);
+      if (value && value->str() == "predict_translator") {
+        find_tran = true;
+        break;
+      }
+    }
+    if (! find_tran) {
+      conf_list->Append(New<ConfigValue>("predict_translator"));
+    }
+  }
+}
+
 Predictor::Predictor(const Ticket& ticket)
-    : Processor(ticket), alphabel_(kRimeAlphabel), placeholder_(kPlaceholder) {
+    : Processor(ticket), placeholder_(kPlaceholder),
+    tag_("prediction"), select_keys_(kSelect_keys)
+{
   if (name_space_ == "processor"){
     name_space_="predictor";
   }
-  if (Config* config = engine_->schema()->config()) {
-    config->GetString("speller/alphabel", &alphabel_);
-    config->GetString(name_space_ + "/placeholder_char", &placeholder_);
-  }
-  if (auto c = Translator::Require("predict_translator")){
-    translator_.reset( c->Create( Ticket(engine_, name_space_, "predict_translator")) );
-  }
+  LoadConfig();
 
-
-  // update prediction on context change.
-  auto* context = engine_->context();
-  select_connection_ =
-      context->select_notifier().connect(
-          [this](Context* ctx) {
-            OnSelect(ctx);
-          });
-  context_update_connection_ =
-      context->update_notifier().connect(
-          [this](Context* ctx) {
-            OnContextUpdate(ctx);
-          });
+  select_connection_ = engine_->context()->select_notifier().connect(
+      [this](Context* ctx) { OnSelect(ctx); });
 }
 
 Predictor::~Predictor() {
   select_connection_.disconnect();
-  context_update_connection_.disconnect();
 }
 
+
 ProcessResult Predictor::ProcessKeyEvent(const KeyEvent& key_event) {
+  if (key_event.ctrl() || key_event.alt() || key_event.super() ) {
+    return kNoop;
+  }
   auto ch = key_event.keycode();
   auto* ctx = engine_->context();
-  if ( ch == XK_BackSpace || ch == XK_Escape) {
-    last_action_ = kDelete;
-    if (!ctx->composition().empty() &&
-        ctx->composition().back().HasTag("prediction")) {
-      ctx->PopInput(ctx->composition().back().length);
-      return kAccepted;
+  auto comp = ctx->composition();
+
+  if (!comp.empty() && comp.back().HasTag(tag_)){
+    auto select_keys = belongs_to(ch, select_keys_ );
+    if (ch == XK_BackSpace || ch == XK_Escape ){
+        ctx->ClearPreviousSegment();
+        return kAccepted;
     }
-  } else if ( ch < 0x7f && belongs_to(ch, alphabel_) ){
-    last_action_ = kUnspecified;
-    if (!ctx->composition().empty() &&
-        ctx->composition().back().HasTag("prediction")) {
-      LOG(INFO) <<" keyevent ascii code and belone to";
-      ctx->Clear();
-      ctx->RefreshNonConfirmedComposition();
+    else if ( ch == XK_Return ){
+      if (!return_key_with_clear_ ) {
+        ctx->ConfirmCurrentSelection();
+      }
+      ctx->ClearPreviousSegment();
     }
-  } else {
-    last_action_ = kUnspecified;
+    else if ( ch >0x20 && ch <0x80 && !select_keys){
+      ctx->ClearPreviousSegment();
+    }
   }
   return kNoop;
 }
 
+
 void Predictor::OnSelect(Context* ctx) {
-    last_action_ = kSelect;
-}
-
-void Predictor::OnContextUpdate(Context* ctx) {
-  if (!translator_ || !ctx || !ctx->composition().empty())
-    return;
-  if (last_action_ == kDelete) {
-    return;
+  if (ctx && ctx->get_option("predict")) {
+    ctx->PushInput(placeholder_);
   }
-  if (ctx->get_option("predict")){
-    Predict(ctx);
-  }
-}
-
-void Predictor::Predict(Context* ctx) {
-  ctx->set_input(placeholder_);
-  int end = ctx->input().length();
-  Segment segment(0,end);
-  segment.status = Segment::kGuess;
-  segment.tags.insert("prediction");
-  auto comp = ctx->composition();
-  comp.AddSegment(segment);
-  comp.back().tags.erase("raw");
-
-  auto menu = New<Menu>();
-  menu->AddTranslation( translator_->Query(ctx->input(),segment));
-  ctx->composition().back().menu = menu;
 }
 
 PredictorComponent::PredictorComponent() {};

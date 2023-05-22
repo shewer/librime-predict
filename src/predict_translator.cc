@@ -225,11 +225,26 @@ void PredictTranslator::set_prefix_from(const string& str){
 
 
 static string get_history_text(Context* ctx, size_t len){
+  string text;
+  if (ctx->IsComposing() ){
+    auto seg = ctx->composition().back();
+    if (seg.status < Segment::kSelected ) {
+      text = ctx->composition().GetTextBefore(seg.start);
+    }
+    else {
+      text = ctx->GetCommitText();
+    }
+  }
+  LOG(INFO)<<"-----test:("<< text <<")";
   auto cm=ctx->commit_history();
-  if (cm.empty()){
+  LOG(INFO) << "===get_history_text===" << text << "=cm:" << cm.empty();
+  if (cm.empty() && text.empty() ){
     return "$";
   }
-  string text;
+  string res = utf8_substr( text , -(len));
+  if (utf8_length(res) >= len )  {
+    return res;
+  }
   for (auto rit = cm.rbegin(); rit != cm.rend(); rit++) {
     if (! (rit->type == "punct" ||
         rit->type == "raw" ||
@@ -264,21 +279,25 @@ an<Translation> PredictTranslator::Query(const string& input, const Segment& seg
     active_input = utf8_substr( ctx->get_property("prediction") ,-(history_length_));
   } else if (prefix_from_ == kInput) {
     from = "input";
-    active_input = utf8_substr( ctx->get_property("prediction") ,-(history_length_));
     active_input = input;
   } else{
     return {};
   }
   LOG(INFO) << "active_input from " << from << ":" << active_input;
+  //std::cout <<  "       ---- active_input from " << from << ":" << active_input;
   auto union_tran = New<UnionTranslation>();
 
   while( !active_input.empty() ){
+    LOG(INFO) <<"chkeck active_input string :" << active_input <<":" << active_input.size() << ":"<< active_input.empty() ;
     auto merged_tran= New<MergedTranslation>( CandidateList() );
+
     if (db_ && enable_predictdb_){
+        LOG(INFO)<< " merged_tran : PredictDbTranslation :" <<  active_input<< segment.start<< segment.end;   
         *merged_tran += New<PredictDbTranslation>(db_, active_input, segment, initial_quality_ - 0.01);
     }
     if (translator_) {
       if (auto table_tran = translator_->Query(active_input, segment)){
+        LOG(INFO)<< " merged_tran : table_translation :" <<  active_input<< segment.start<< segment.end;   
         *merged_tran += New<ShadowTranslation>(table_tran, table_shadow, active_input);
       }
     }
@@ -287,6 +306,14 @@ an<Translation> PredictTranslator::Query(const string& input, const Segment& seg
   }
   *union_tran += New<PredictDbTranslation>(db_, "$", segment, initial_quality_ -0.02); 
 
+  LOG(INFO) << "before return translation  " << from << ":" << active_input;
+  LOG(INFO) << "check trasnlation :" << union_tran->exhausted() ;
+  if (union_tran && !union_tran->exhausted() ){
+    auto cand = union_tran->Peek() ;
+    if (cand) {
+      LOG(INFO)<< "Peek first " << cand->text() ;
+    }
+  }
   return union_tran;
 }
 
