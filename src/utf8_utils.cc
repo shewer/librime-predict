@@ -1,4 +1,4 @@
-// utf8  string tools 
+// utf8  string tools
 
 #include "utf8_utils.h"
 

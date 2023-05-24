@@ -10,6 +10,8 @@
 #include <rime/translator.h>
 #include <rime/gear/translator_commons.h>
 
+#define kPlaceholder (" ")
+
 namespace rime {
 class Context;
 class PredictDb;
@@ -23,11 +25,11 @@ class PredictTranslator : public Translator, public TranslatorOptions {
     an<Translation> Query(const string& input, const Segment& segment );
 
   private:
-    enum Prefix_from{ kHistory,kProperty, kInput};
+    enum Prefix_from{ kHistory, kProperty, kInput};
     Prefix_from prefix_from_ = kHistory;
     void set_prefix_from(const string& str);
-    void set_prefix_from(const Prefix_from prefix_from) { prefix_from_= prefix_from; };
-    void load_config();
+    void set_prefix_from(const Prefix_from prefix_from) { prefix_from_ = prefix_from; };
+    void LoadConfig();
 
     bool text_with_prefix_= false;
     bool with_match_candidate_= false;
@@ -47,7 +49,8 @@ class PredictTranslatorComponent : public PredictTranslator::Component {
   Translator* Create(const Ticket& ticket) override;
 
  protected:
-  the<PredictDb> db_;
+  map<string,the<PredictDb>> dbpool_;
 };
+
 }  // namespace rime
 #endif /* !PREDICT_TRANSLATOR_H */
