@@ -11,8 +11,9 @@ patch:
     dictionary: essay_cn # table_translator 字典，如果沒有設定dictionary 則不使用 table_translation
     enable_completion: true # 使用table_translator 必須設定 true，否則將 essay table_translator 將失去作用
     enable_user_dict: true # 調整詞頻
-    #enable_predictdb: false # default: true 使用predict.db
-    #prefix_from: history # default:history history| property |input 
+    #enable_predictdb: false # default: true 使用predict.db  ,filename 參考 predictdb:
+    #predictdb: predict_cn # default predict
+    #prefix_from: history # default:history history| property |input
     #with_match_candidate: true
     #enable_sentence: false  #
 

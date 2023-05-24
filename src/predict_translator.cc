@@ -15,16 +15,21 @@
 
 #define kHistoryLength  (3)
 
-//translation
-//query
-//  switch input from  history input property
-//  predictdb  db active_input
+//PredictTranslator::Query
 //
-//  switch input from  history input property
-//
-//  with_candidate (has_menu)
-//  with_match_text (cand.text == active_input)
-//  table  active_input and wrap shadow
+//  active_input = substr( commit_history + commit_text , -(len))
+//  new uniontran
+//  for (len ; len<=0 ; len--){
+//    new merged_tran;
+//    merged_tran += predictdb_tran;
+//    merged_tran += essay_tran;
+//    uniontran += merged_tran;
+//  }
+//  new merged_tran;
+//  merged_tran += predictdb_tran("$");
+//  merged_tran += essay_tran("$");
+//  uniontran += merged_tran;
+//  return uniontran
 //
 namespace rime {
 
@@ -62,112 +67,10 @@ PredictDbTranslation::PredictDbTranslation(PredictDb *db, const string prefix
   }
 }
 
-typedef std::function<an<Translation> (const string&)> predict_func;
-
-class PredictTranslation : public Translation {
-  public:
-    PredictTranslation( const string& prefix, predict_func func);
-    bool Next();
-    an<Candidate> Peek();
-  protected:
-    bool Replenish();
-    string prefix_;
-    predict_func func_;
-    an<Translation> translation_;
-};
-
-PredictTranslation::PredictTranslation(const string& prefix, predict_func func)
-  : prefix_(prefix), func_(func) {
-  set_exhausted( Replenish() );
-}
-
-bool PredictTranslation::Next() {
-  if(exhausted()) {
-    return false;
-  }
-  if (translation_->Next()) {
-    return true;
-  }
-  return Replenish();
-}
-an<Candidate> PredictTranslation::Peek() {
-  if (exhausted()) {
-    return nullptr;
-  }
-  if (auto cand = translation_->Peek()) {
-    return cand;
-  }
-  else {
-    if (Replenish())
-      return Peek();
-    else
-      return {};
-  }
-}
-
-bool PredictTranslation::Replenish() {
-  if (prefix_.empty()) {
-    set_exhausted(true);
-    return false;
-  };
-  translation_ = func_(prefix_);
-  auto n= prefix_.c_str();
-  utf8::unchecked::next(n);
-  string res = prefix_.substr(n - prefix_.c_str());
-  if (res.length() == 0) {
-    prefix_ = (prefix_== "$") ? "" : "$";
-  }
-  else {
-    prefix_ = res;
-  }
-
-  if (!translation_ || translation_->exhausted()) {
-    return Replenish();
-  }
-  return true;
-}
-
-
-class PredictTranslation1 : public UnionTranslation{
-  public:
-    PredictTranslation1( const string& prefix, predict_func func)
-      : prefix_(prefix), func_(func) { Replenish() ; };
-    //bool Next();
-    //an<Candidate> Peek();
-  protected:
-    bool Replenish();
-    string prefix_;
-    predict_func func_;
-};
-
-bool PredictTranslation1::Replenish() {
-  do {
-    auto t = func_(prefix_); // <<---------- Bug 找不到時會異常
-
-    if (t && !t->exhausted()) {
-      *this += t;
-    }
-    string res = utf8_substr(prefix_, 1);
-    prefix_ = (res.length() == 0 && prefix_ != "$") ? "$" : res;
-  }while( !prefix_.empty()  );
-  return !exhausted();
-}
-
 
 // ShadowTranslation
 typedef std::function<an<Candidate>(an<Candidate> cand, const size_t start, const size_t end, const string&, const string&)> shadow_func;
-// ShadowTranslation  table candidate to predict candidate
-an<Candidate> predict_shadow(an<Candidate> cand, const string& prefix, const string& last_match) {
-  size_t f_idx = cand->text().find(prefix);
-  if (f_idx == 0 && cand->text().length() >= prefix.length() ) {
-    auto text = cand->text().substr(prefix.length());
-    double fix_quality = (cand->type()=="completion") ? 1.0 : 0;
-    cand->set_quality( fix_quality + cand->quality());
-    return New<ShadowCandidate>(
-        cand,cand->type(), text,"tab",false);
-  }
-  return {};
-}
+
 an<Candidate> table_shadow(an<Candidate> cand, const size_t start, const size_t end
     , const string& prefix, const string& last_match) {
   auto sub_str = prefix + last_match;
@@ -186,9 +89,6 @@ an<Candidate> table_shadow(an<Candidate> cand, const size_t start, const size_t 
   return New<ShadowCandidate>( cand,"prediction-tab", text,"tab",false);
 }
 
-an<Candidate> predict_shadow2(an<Candidate> cand, const string& last_match) {
-  return {};
-}
 class ShadowTranslation : public CacheTranslation{
   public:
     ShadowTranslation(an<Translation> translation
@@ -203,7 +103,6 @@ class ShadowTranslation : public CacheTranslation{
     shadow_func func_;
 };
 
-
 ShadowTranslation::ShadowTranslation(an<Translation> translation, shadow_func func
     , const size_t start, const size_t end, const string& prefix, const string& last_match)
   : CacheTranslation(translation), prefix_(prefix), start_(start), end_(end)
@@ -211,7 +110,6 @@ ShadowTranslation::ShadowTranslation(an<Translation> translation, shadow_func fu
     // prepare first candidate of type of completion
     Peek();
 }
-
 
 an<Candidate> ShadowTranslation::Peek() {
   if (exhausted())
