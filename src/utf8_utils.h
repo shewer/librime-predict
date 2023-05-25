@@ -7,7 +7,7 @@
 
 #ifndef UTF8_UTILS_H
 #define UTF8_UTILS_H
-
+#include <string>
 #include <utf8.h>
 
 using std::string;
